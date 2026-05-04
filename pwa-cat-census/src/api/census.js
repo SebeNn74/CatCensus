@@ -1,0 +1,34 @@
+import { API_BASE_URL, ID_PROYECT, COLOR_PROYECT } from './config'
+
+export async function createCensusApi(censo, token) {
+    const payload = {
+        ...censo,
+        idProyecto: ID_PROYECT,
+        color: COLOR_PROYECT,
+    }
+
+    const response = await fetch(`${API_BASE_URL}/censos`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+        throw new Error('Error al registrar el censo')
+    }
+
+    return response.json()
+}
+
+export async function getCensusApi() {
+    const response = await fetch(`${API_BASE_URL}/censos`)
+
+    if (!response.ok) {
+        throw new Error('Error al obtener censos')
+    }
+
+    return response.json()
+}
