@@ -1,17 +1,19 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext'
-import ProtectedRoute from './components/ProtectedRoute'
-import LoginPage from './pages/LoginPage'
-import PeoplePage from './pages/PeoplePage'
-import PetsPage from './pages/PetsPage'
-import CensusPage from './pages/CensusPage'
-import MapPage from './pages/MapPage'
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import LoginPage from "./pages/LoginPage";
+import PeoplePage from "./pages/PeoplePage";
+import PetsPage from "./pages/PetsPage";
+import CensusPage from "./pages/CensusPage";
+import MapPage from "./pages/MapPage";
+import SyncBanner from "./components/SyncBanner";
 
 function App() {
   return (
     <>
       <AuthProvider>
         <BrowserRouter>
+          <SyncBanner />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
 
@@ -29,7 +31,7 @@ function App() {
         </BrowserRouter>
       </AuthProvider>
     </>
-  )
+  );
 }
 
-export default App
+export default App;

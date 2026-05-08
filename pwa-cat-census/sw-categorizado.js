@@ -4,11 +4,11 @@ const CACHE_INMUTABLE = "cache-inmutable";
 const CACHE_STATIC = "cache-static";
 const CACHE_DYNAMIC = "cache-dynamic";
 
-function limpiarCache(cacheName, numeroItems) {
+function cleanCache(cacheName, numeroItems) {
     caches.open(cacheName).then((cache) => {
         cache.keys().then((keys) => {
             if (keys.length > numeroItems) {
-                cache.delete(keys[0]).then(() => limpiarCache(cacheName, numeroItems));
+                cache.delete(keys[0]).then(() => cleanCache(cacheName, numeroItems));
             }
         });
     });
@@ -42,7 +42,7 @@ self.addEventListener("fetch", (e) => {
             return fetch(e.request).then((networkResponse) => {
                 caches.open(CACHE_DYNAMIC).then((cache) => {
                     cache.put(e.request, networkResponse);
-                    limpiarCache(CACHE_DYNAMIC, 10);
+                    cleanCache(CACHE_DYNAMIC, 10);
                 });
                 return networkResponse.clone();
             });

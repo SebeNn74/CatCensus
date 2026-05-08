@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
-import { initializeMockApi } from './api/mockApi'
+import { initializeMockApi } from '../../api-mock/mockApi.js'
 
 initializeMockApi()
 
