@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import bodyParser from 'body-parser'
-import { handleLogin } from './handlers/auth.js'
+import { handleLogin, handleRegister } from './handlers/auth.js'
 import { handlePersonas } from './handlers/personas.js'
 import { handleMascotas } from './handlers/mascotas.js'
 import { handleCensos } from './handlers/censos.js'
@@ -13,6 +13,12 @@ app.use(bodyParser.json())
 
 app.post('/api/v1/auth/login', async (req, res) => {
   const result = await handleLogin(req.body)
+  if (result.data) return res.status(result.status).json(result.data)
+  return res.status(result.status).json({ error: result.error })
+})
+
+app.post('/api/v1/auth/register', async (req, res) => {
+  const result = await handleRegister(req.body)
   if (result.data) return res.status(result.status).json(result.data)
   return res.status(result.status).json({ error: result.error })
 })

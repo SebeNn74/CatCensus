@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useConnection } from "../hooks/useConnection";
-import { createPersonApi } from "../api/people";
+import { createPersonApi, getPeopleApi } from "../api/people";
 import { saveLocal, getAll } from "../db/indexedDB";
 import { generateUUID } from "../utils/uuid";
 
@@ -44,8 +44,24 @@ function PeoplePage() {
   const loadPeople = async () => {
     try {
       setLoadingList(true);
+      let apiPeople = [];
+      if (online) {
+        try {
+          apiPeople = await getPeopleApi(token);
+        } catch (err) {
+          console.error("Error fetching from API:", err);
+        }
+      }
       const personas = await getAll("personas");
-      setPeople(personas);
+      
+      const combined = [...personas];
+      apiPeople.forEach(apiP => {
+        if (!combined.find(p => p.id === apiP.id)) {
+          combined.push(apiP);
+        }
+      });
+      
+      setPeople(combined);
     } catch (err) {
       console.error("Error al cargar personas:", err);
     } finally {

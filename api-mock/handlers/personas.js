@@ -1,4 +1,4 @@
-import { simulateNetworkDelay, validateToken, mockDatabase, idCounters } from '../db.js'
+import { simulateNetworkDelay, validateToken, mockDatabase, idCounters, saveDatabase } from '../db.js'
 
 export async function handlePersonas(method, body, token) {
   await simulateNetworkDelay()
@@ -24,6 +24,7 @@ export async function handlePersonas(method, body, token) {
       ...persona,
     }
     mockDatabase.personas.push(newPersona)
+    saveDatabase()
 
     return {
       status: 201,

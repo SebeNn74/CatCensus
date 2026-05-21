@@ -1,6 +1,5 @@
-// CONFIGURACIÓN DE CACHÉS
-const CACHE_STATIC = "static-v2";
-const CACHE_DYNAMIC = "dynamic-v2";
+const CACHE_STATIC = "static-v3";
+const CACHE_DYNAMIC = "dynamic-v3";
 
 // Shell real de la app
 const STATIC_ASSETS = [
@@ -48,6 +47,9 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
+  // Ignore non-http(s) requests
+  if (!url.protocol.startsWith('http')) return;
+
   if (request.url.startsWith(API_BASE_URL)) {
     event.respondWith(networkFirst(request));
     return;
@@ -90,7 +92,7 @@ async function cacheFirst(request, fallbackUrl) {
     if (request.mode === "navigate") {
       return caches.match("/index.html");
     }
-    return undefined;
+    return Response.error();
   }
 }
 
@@ -106,8 +108,11 @@ async function networkFirst(request, fallbackUrl) {
   } catch {
     const cached = await caches.match(request);
     if (cached) return cached;
-    if (fallbackUrl) return caches.match(fallbackUrl);
-    return undefined;
+    if (fallbackUrl) {
+      const fallback = await caches.match(fallbackUrl);
+      if (fallback) return fallback;
+    }
+    return Response.error();
   }
 }
 
