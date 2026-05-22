@@ -3,7 +3,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useConnection } from "../hooks/useConnection";
 import { usePersonForm } from "../hooks/usePersonForm";
 import { createPersonApi, getPeopleApi } from "../api/people";
-import { saveLocal, getAll, syncPending, markAsSynced } from "../db/indexedDB";
+import { saveLocal, getAll, syncPending, markAsSynced, cacheRemoteData } from "../db/indexedDB";
 import { generateUUID } from "../utils/uuid";
 import PersonCard from "./components/PersonCard";
 import FormField from "../components/FormField";
@@ -28,23 +28,17 @@ function usePeople(token, online) {
   const loadPeople = useCallback(async () => {
     setLoadingList(true);
     try {
-      const local = await getAll("personas");
-      let merged = [...local];
-
       if (online) {
         try {
           const remote = await getPeopleApi(token);
-          remote.forEach((remotePerson) => {
-            if (!merged.find((p) => p.id === remotePerson.id)) {
-              merged.push(remotePerson);
-            }
-          });
+          await cacheRemoteData("personas", remote);
         } catch (err) {
           console.error("Error al obtener personas del servidor:", err);
         }
       }
 
-      setPeople(merged);
+      const local = await getAll("personas");
+      setPeople(local);
     } catch (err) {
       console.error("Error al cargar personas:", err);
     } finally {
@@ -95,23 +89,14 @@ function PeoplePage() {
     const person = { id: generateUUID(), ...form };
 
     try {
-      await saveLocal("personas", person);
-
       if (online) {
-        try {
-          await createPersonApi(person, token);
-          await markAsSynced("personas", person.id);
-          setFeedback({
-            type: FEEDBACK_TYPE.ok,
-            message: "Persona registrada correctamente.",
-          });
-        } catch (err) {
-          setFeedback({
-            type: FEEDBACK_TYPE.error,
-            message: `Error al registrar: ${err.message}`,
-          });
-        }
+        await createPersonApi(person, token);
+        setFeedback({
+          type: FEEDBACK_TYPE.ok,
+          message: "Persona registrada correctamente.",
+        });
       } else {
+        await saveLocal("personas", person);
         setFeedback({
           type: FEEDBACK_TYPE.offline,
           message:

@@ -90,10 +90,13 @@ export async function update(storeName, id, updates) {
     const updated = {
       ...doc,
       ...updates,
-      syncStatus:
-        doc.syncStatus === "synced" ? "pending" : doc.syncStatus,
       updatedAt: new Date().toISOString(),
     };
+    
+    if (updates.syncStatus === undefined) {
+      updated.syncStatus = doc.syncStatus === "synced" ? "pending" : doc.syncStatus;
+    }
+    
     await db.put(updated);
 
     const { _id, ...record } = updated;
@@ -172,4 +175,59 @@ export const getAll = readAll;
 
 export async function countPendings() {
   return getSyncStats();
+}
+
+// CACHE: Sincroniza datos remotos en la base local (Offline-First)
+export async function cacheRemoteData(storeName, remoteItems) {
+  const db = getDB(storeName);
+  const allDocs = await db.allDocs({ include_docs: true });
+  
+  const existingDocs = allDocs.rows.reduce((acc, row) => {
+    acc[row.id] = row.doc;
+    return acc;
+  }, {});
+
+  const bulkOperations = [];
+
+  remoteItems.forEach(remoteItem => {
+    const idStr = String(remoteItem.id);
+    const existing = existingDocs[idStr];
+    
+    if (existing) {
+      // Actualizar si ya existía localmente y estaba sincronizado
+      // (si estaba pending, la lógica de sincronización lo manejará)
+      if (existing.syncStatus === 'synced') {
+        bulkOperations.push({
+          ...remoteItem,
+          _id: idStr,
+          _rev: existing._rev,
+          syncStatus: 'synced',
+          updatedAt: new Date().toISOString()
+        });
+      }
+      delete existingDocs[idStr]; // Marcar como procesado
+    } else {
+      // Insertar nuevo registro
+      bulkOperations.push({
+        ...remoteItem,
+        _id: idStr,
+        syncStatus: 'synced',
+        updatedAt: new Date().toISOString()
+      });
+    }
+  });
+
+  // Eliminar los registros que estaban sincronizados localmente pero que ya no existen en la API
+  Object.values(existingDocs).forEach(doc => {
+    if (doc.syncStatus === 'synced') {
+      bulkOperations.push({
+        ...doc,
+        _deleted: true
+      });
+    }
+  });
+
+  if (bulkOperations.length > 0) {
+    await db.bulkDocs(bulkOperations);
+  }
 }

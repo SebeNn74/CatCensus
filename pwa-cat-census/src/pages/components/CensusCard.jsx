@@ -5,25 +5,32 @@ const SYNC_STATUS = {
   synced: { label: "Sincronizado", modifier: "synced" },
 };
 
-const shortId = (id) => id.substring(0, 8);
-const isBase64 = (str) => str?.startsWith("data:image");
+const shortId = (id) => id ? String(id).substring(0, 8) : "N/A";
 
 function CensusCard({ census, owner, pet }) {
   const syncInfo = census.syncStatus ? SYNC_STATUS[census.syncStatus] : null;
 
-  const ownerName = owner
-    ? `${owner.name ?? owner.nombres ?? ""} ${owner.last_name ?? owner.apellidos ?? ""}`.trim()
-    : `ID: ${shortId(census.idDueno)}…`;
+  const actualOwner = owner || census.dueno;
+  const actualPet = pet || census.mascota;
 
-  const petName = pet ? pet.nombre : `ID: ${shortId(census.idMascota)}…`;
+  const ownerId = actualOwner?.id || census.idDueno;
+  const petId = actualPet?.id || census.idMascota;
+
+  const ownerName = actualOwner
+    ? `${actualOwner.name ?? actualOwner.nombres ?? ""} ${actualOwner.last_name ?? actualOwner.apellidos ?? ""}`.trim()
+    : `ID: ${shortId(ownerId)}…`;
+
+  const petName = actualPet ? actualPet.nombre : `ID: ${shortId(petId)}…`;
+
+  const photo = census.fotografiaCenso || census.fotografia;
 
   return (
     <article className="census-card">
       {/* Miniatura de la foto */}
-      {isBase64(census.fotografia) && (
+      {photo && (
         <img
           className="census-card-photo"
-          src={census.fotografia}
+          src={photo}
           alt={`Foto del censo ${shortId(census.id)}`}
         />
       )}

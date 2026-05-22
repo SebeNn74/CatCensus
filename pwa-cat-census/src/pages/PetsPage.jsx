@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useConnection } from "../hooks/useConnection";
 import { createPetApi, getPetsApi } from "../api/pets";
-import { saveLocal, getAll, syncPending, markAsSynced } from "../db/indexedDB";
+import { saveLocal, getAll, syncPending, markAsSynced, cacheRemoteData } from "../db/indexedDB";
 import { generateUUID } from "../utils/uuid";
 import PetCard from "./components/PetCard";
 import "./styles/PetsPage.css";
@@ -40,23 +40,17 @@ function usePets(token, online) {
   const loadPets = useCallback(async () => {
     setLoadingList(true);
     try {
-      const local = await getAll("mascotas");
-      let merged = [...local];
-
       if (online) {
         try {
           const remote = await getPetsApi(token);
-          remote.forEach((remotePet) => {
-            if (!merged.find((p) => p.id === remotePet.id)) {
-              merged.push(remotePet);
-            }
-          });
+          await cacheRemoteData("mascotas", remote);
         } catch (err) {
           console.error("Error al obtener mascotas del servidor:", err);
         }
       }
 
-      setPets(merged);
+      const local = await getAll("mascotas");
+      setPets(local);
     } catch (err) {
       console.error("Error al cargar mascotas:", err);
     } finally {
@@ -113,23 +107,14 @@ function PetsPage() {
     };
 
     try {
-      await saveLocal("mascotas", pet);
-      
       if (online) {
-        try {
-          await createPetApi(pet, token);
-          await markAsSynced("mascotas", pet.id);
-          setFeedback({
-            type: FEEDBACK_TYPE.ok,
-            message: "Mascota registrada correctamente.",
-          });
-        } catch (err) {
-          setFeedback({
-            type: FEEDBACK_TYPE.error,
-            message: `Error al registrar: ${err.message}`,
-          });
-        }
+        await createPetApi(pet, token);
+        setFeedback({
+          type: FEEDBACK_TYPE.ok,
+          message: "Mascota registrada correctamente.",
+        });
       } else {
+        await saveLocal("mascotas", pet);
         setFeedback({
           type: FEEDBACK_TYPE.offline,
           message:

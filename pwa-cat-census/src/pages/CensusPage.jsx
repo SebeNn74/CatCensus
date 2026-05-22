@@ -4,7 +4,7 @@ import { useConnection } from "../hooks/useConnection";
 import { createCensusApi, getCensusApi } from "../api/census";
 import { getPeopleApi } from "../api/people";
 import { getPetsApi } from "../api/pets";
-import { saveLocal, getAll } from "../db/indexedDB";
+import { saveLocal, getAll, cacheRemoteData, syncPending } from "../db/indexedDB";
 import { generateUUID } from "../utils/uuid";
 import CensusCard from "./components/CensusCard";
 import CameraCapture from "./components/CameraCapture";
@@ -22,13 +22,7 @@ const FEEDBACK_TYPE = {
   offline: "offline",
 };
 
-function mergeById(local, remote) {
-  const merged = [...local];
-  remote.forEach((item) => {
-    if (!merged.find((m) => m.id === item.id)) merged.push(item);
-  });
-  return merged;
-}
+
 
 function getCurrentPosition() {
   return new Promise((resolve, reject) => {
@@ -51,18 +45,17 @@ function useCensuses(token, online) {
   const loadCensuses = useCallback(async () => {
     setLoadingList(true);
     try {
-      const local = await getAll("censos");
-      let merged = local;
-
       if (online) {
         try {
           const remote = await getCensusApi(token);
-          merged = mergeById(local, remote);
+          await cacheRemoteData("censos", remote);
         } catch (err) {
           console.error("Error al obtener censos del servidor:", err);
         }
       }
-      setCensuses(merged);
+      
+      const local = await getAll("censos");
+      setCensuses(local);
     } catch (err) {
       console.error("Error al cargar censos:", err);
     } finally {
@@ -71,8 +64,21 @@ function useCensuses(token, online) {
   }, [token, online]);
 
   useEffect(() => {
-    loadCensuses();
-  }, [loadCensuses]);
+    const sync = async () => {
+      if (!online) return;
+      try {
+        await syncPending("censos", async (census) => {
+          await createCensusApi(census, token);
+        });
+      } catch (err) {
+        console.error("Error sincronizando censos pendientes:", err);
+      }
+    };
+
+    sync().then(() => {
+      loadCensuses();
+    });
+  }, [online, token, loadCensuses]);
 
   return { censuses, loadingList, loadCensuses };
 }
@@ -84,26 +90,24 @@ function useDependencies(token, online) {
   useEffect(() => {
     async function load() {
       try {
-        const localPeople = await getAll("personas");
-        const localPets = await getAll("mascotas");
-        let mergedPeople = localPeople;
-        let mergedPets = localPets;
-
         if (online) {
           try {
             const [remotePeople, remotePets] = await Promise.all([
               getPeopleApi(token),
               getPetsApi(token),
             ]);
-            mergedPeople = mergeById(localPeople, remotePeople);
-            mergedPets = mergeById(localPets, remotePets);
+            await cacheRemoteData("personas", remotePeople);
+            await cacheRemoteData("mascotas", remotePets);
           } catch (err) {
             console.error("Error al obtener dependencias del servidor:", err);
           }
         }
 
-        setPeople(mergedPeople);
-        setPets(mergedPets);
+        const localPeople = await getAll("personas");
+        const localPets = await getAll("mascotas");
+        
+        setPeople(localPeople);
+        setPets(localPets);
       } catch (err) {
         console.error("Error al cargar dependencias:", err);
       }

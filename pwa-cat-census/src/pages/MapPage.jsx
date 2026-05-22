@@ -31,7 +31,7 @@ function MapPage() {
 
       // En modo offline, cargar de IndexedDB
       const localCensuses = await getAll("censos");
-      
+
       const combined = [...localCensuses];
       apiCensuses.forEach(apiC => {
         if (!combined.find(c => c.id === apiC.id)) {
@@ -71,24 +71,20 @@ function MapPage() {
   };
 
   // Coordenadas centrales por defecto (ej. Tunja o Bogotá si no hay censos)
-  const defaultCenter = censuses.length > 0 
-    ? [censuses[0].lat, censuses[0].lon] 
+  const defaultCenter = censuses.length > 0
+    ? [censuses[0].lat, censuses[0].lon]
     : [5.535, -73.367]; // Tunja aprox
 
   return (
     <div style={{ padding: "24px 16px", height: "calc(100vh - 80px)", display: "flex", flexDirection: "column" }}>
       <h1>Mapa de Censos</h1>
-      <p style={{ color: "#6b7280", marginBottom: "16px" }}>
-        Visualización interactiva de mascotas censadas (RF07, RF08, RF09)
-      </p>
-
       {loading ? (
         <p>Cargando mapa y marcadores...</p>
       ) : (
         <div style={{ flex: 1, borderRadius: "8px", overflow: "hidden", border: "1px solid #e5e7eb", zIndex: 0 }}>
-          <MapContainer 
-            center={defaultCenter} 
-            zoom={6} 
+          <MapContainer
+            center={defaultCenter}
+            zoom={6}
             style={{ width: "100%", height: "100%" }}
           >
             {/* Capa gratuita de OpenStreetMap */}
@@ -98,37 +94,37 @@ function MapPage() {
             />
 
             {censuses.map(censo => (
-              <Marker 
-                key={censo.id} 
-                position={[censo.lat, censo.lon]} 
+              <Marker
+                key={censo.id}
+                position={[censo.lat, censo.lon]}
                 icon={createCustomIcon(censo.color)}
               >
                 <Popup>
                   <div style={{ minWidth: "200px" }}>
-                    {censo.fotografia && censo.fotografia.startsWith('data:image') ? (
-                      <img 
-                        src={censo.fotografia} 
-                        alt="Foto Censo" 
-                        style={{ width: "100%", height: "120px", objectFit: "cover", borderRadius: "4px", marginBottom: "8px" }} 
+                    {(censo.fotografiaCenso || censo.fotografia) ? (
+                      <img
+                        src={censo.fotografiaCenso || censo.fotografia}
+                        alt="Foto Censo"
+                        style={{ width: "100%", height: "120px", objectFit: "cover", borderRadius: "4px", marginBottom: "8px" }}
                       />
                     ) : (
                       <div style={{ width: "100%", height: "120px", backgroundColor: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "4px", marginBottom: "8px" }}>
                         <span style={{ fontSize: "24px" }}>📸</span>
                       </div>
                     )}
-                    
+
                     <h3 style={{ margin: "0 0 8px 0", fontSize: "16px", color: "#1f2937" }}>Información del Censo</h3>
-                    
+
                     <div style={{ marginBottom: "8px", fontSize: "13px" }}>
                       <strong>🐱 Mascota:</strong>
                       {censo.mascota ? (
                         <div style={{ paddingLeft: "8px", color: "#4b5563" }}>
-                          Nombre: {censo.mascota.nombre}<br/>
-                          Tipo: {censo.mascota.tipo || "N/A"}<br/>
+                          Nombre: {censo.mascota.nombre}<br />
+                          Tipo: {censo.mascota.tipo || "N/A"}<br />
                           Edad: {censo.mascota.edad} años
                         </div>
                       ) : (
-                        <div style={{ paddingLeft: "8px", color: "#9ca3af" }}>ID: {censo.idMascota.substring(0,8)}... (Offline)</div>
+                        <div style={{ paddingLeft: "8px", color: "#9ca3af" }}>ID: {censo.idMascota.substring(0, 8)}... (Offline)</div>
                       )}
                     </div>
 
@@ -136,16 +132,16 @@ function MapPage() {
                       <strong>👤 Dueño:</strong>
                       {censo.dueno ? (
                         <div style={{ paddingLeft: "8px", color: "#4b5563" }}>
-                          Nombre: {censo.dueno.nombres} {censo.dueno.apellidos}<br/>
+                          Nombre: {censo.dueno.nombres} {censo.dueno.apellidos}<br />
                           Teléfono: {censo.dueno.telefono}
                         </div>
                       ) : (
-                        <div style={{ paddingLeft: "8px", color: "#9ca3af" }}>ID: {censo.idDueno.substring(0,8)}... (Offline)</div>
+                        <div style={{ paddingLeft: "8px", color: "#9ca3af" }}>ID: {censo.idDueno.substring(0, 8)}... (Offline)</div>
                       )}
                     </div>
-                    
+
                     <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "8px", borderTop: "1px solid #e5e7eb", paddingTop: "8px" }}>
-                      Proyecto: {censo.idProyecto || 'Local'}<br/>
+                      Proyecto: {censo.idProyecto || 'Local'}<br />
                       Lat: {censo.lat}, Lon: {censo.lon}
                     </div>
                   </div>
