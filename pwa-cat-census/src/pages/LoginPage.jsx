@@ -1,118 +1,252 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
-import { loginApi, registerApi } from '../api/auth'
-import catLogo from '/icon_rounded.png'
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import { loginApi, registerApi } from "../api/auth";
+import catLogo from "/icon_maskable.png";
+import "./styles/LoginPage.css";
 
-function LoginPage() {
-	const [isRegistering, setIsRegistering] = useState(false)
-	const [user, setUser] = useState('')
-	const [password, setPassword] = useState('')
+const DOC_TYPES = [
+  { value: "CC", label: "CC – Cédula de Ciudadanía" },
+  { value: "CE", label: "CE – Cédula de Extranjería" },
+  { value: "Pasaporte", label: "Pasaporte" },
+];
 
-	// Campos extra para registro
-	const [name, setName] = useState('')
-	const [lastName, setLastName] = useState('')
-	const [docType, setDocType] = useState('CC')
-	const [document, setDocument] = useState('')
-	const [address, setAddress] = useState('')
-	const [phone, setPhone] = useState('')
-	const [city, setCity] = useState('')
+const INITIAL_REGISTER_FIELDS = {
+  name: "",
+  lastName: "",
+  docType: "CC",
+  document: "",
+  address: "",
+  phone: "",
+  city: "",
+};
 
-	const [error, setError] = useState(null)
-	const [loading, setLoading] = useState(false)
-
-	const { login } = useAuth()
-	const navigate = useNavigate()
-
-	const handleSubmit = async (e) => {
-		e.preventDefault()
-		setLoading(true)
-		setError(null)
-
-		try {
-			if (isRegistering) {
-				const data = await registerApi({
-					name,
-					last_name: lastName,
-					docType,
-					document,
-					address,
-					phone,
-					city,
-					user,
-					password
-				})
-				login(data.token)
-				navigate('/censo')
-			} else {
-				const data = await loginApi(user, password)
-				login(data.token)
-				navigate('/censo')
-			}
-		} catch (err) {
-			setError(err.message)
-		} finally {
-			setLoading(false)
-		}
-	}
-
-	return (
-		<div>
-			<div className="hero">
-				<img src={catLogo} alt="Gato logo" />
-			</div>
-			<h1>{isRegistering ? 'Registrarse' : 'Iniciar Sesión'}</h1>
-			<form onSubmit={handleSubmit}>
-				{isRegistering && (
-					<>
-						<input type="text" placeholder="Nombres" value={name} onChange={(e) => setName(e.target.value)} required />
-						<input type="text" placeholder="Apellidos" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
-						<select value={docType} onChange={(e) => setDocType(e.target.value)} required style={{display: "block", width: "100%", marginBottom: "1rem", padding: "10px", borderRadius: "8px", border: "1px solid #ddd"}}>
-							<option value="CC">CC</option>
-							<option value="CE">CE</option>
-							<option value="Pasaporte">Pasaporte</option>
-						</select>
-						<input type="text" placeholder="Número de Documento" value={document} onChange={(e) => setDocument(e.target.value)} required />
-						<input type="text" placeholder="Dirección" value={address} onChange={(e) => setAddress(e.target.value)} required />
-						<input type="text" placeholder="Teléfono" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-						<input type="text" placeholder="Ciudad" value={city} onChange={(e) => setCity(e.target.value)} required />
-					</>
-				)}
-
-				<input
-					type="text"
-					placeholder="Usuario"
-					value={user}
-					onChange={(e) => setUser(e.target.value)}
-					required
-				/>
-				<input
-					type="password"
-					placeholder="Contraseña"
-					value={password}
-					onChange={(e) => setPassword(e.target.value)}
-					required
-				/>
-				<button type="submit" disabled={loading}>
-					{loading ? 'Procesando...' : (isRegistering ? 'Crear Cuenta' : 'Ingresar')}
-				</button>
-				{error && <p style={{ color: 'red', marginTop: '8px' }}>{error}</p>}
-			</form>
-
-			<div style={{ textAlign: 'center', marginTop: '16px' }}>
-				<button 
-					type="button" 
-					onClick={() => {
-						setIsRegistering(!isRegistering)
-						setError(null)
-					}} 
-					style={{ background: 'none', border: 'none', color: '#3b82f6', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
-				>
-					{isRegistering ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}
-				</button>
-			</div>
-		</div>
-	)
+function FormField({ type = "text", placeholder, value, onChange, required }) {
+  return (
+    <input
+      className="login-input"
+      type={type}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      required={required}
+    />
+  );
 }
 
-export default LoginPage
+function RegisterFields({ fields, onChange }) {
+  return (
+    <>
+      <FormField
+        placeholder="Nombres"
+        value={fields.name}
+        onChange={(e) => onChange("name", e.target.value)}
+        required
+      />
+      <FormField
+        placeholder="Apellidos"
+        value={fields.lastName}
+        onChange={(e) => onChange("lastName", e.target.value)}
+        required
+      />
+
+      <select
+        className="login-input login-select"
+        value={fields.docType}
+        onChange={(e) => onChange("docType", e.target.value)}
+        required
+      >
+        {DOC_TYPES.map(({ value, label }) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </select>
+
+      <FormField
+        placeholder="Número de Documento"
+        value={fields.document}
+        onChange={(e) => onChange("document", e.target.value)}
+        required
+      />
+      <FormField
+        placeholder="Dirección"
+        value={fields.address}
+        onChange={(e) => onChange("address", e.target.value)}
+        required
+      />
+      <FormField
+        placeholder="Teléfono"
+        value={fields.phone}
+        onChange={(e) => onChange("phone", e.target.value)}
+        required
+      />
+      <FormField
+        placeholder="Ciudad"
+        value={fields.city}
+        onChange={(e) => onChange("city", e.target.value)}
+        required
+      />
+    </>
+  );
+}
+
+function useLoginForm() {
+  const [credentials, setCredentials] = useState({ user: "", password: "" });
+  const [registerFields, setRegisterFields] = useState(INITIAL_REGISTER_FIELDS);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const updateCredential = (field) => (e) =>
+    setCredentials((prev) => ({ ...prev, [field]: e.target.value }));
+
+  const updateRegisterField = (field, value) =>
+    setRegisterFields((prev) => ({ ...prev, [field]: value }));
+
+  return {
+    credentials,
+    registerFields,
+    error,
+    loading,
+    setError,
+    setLoading,
+    updateCredential,
+    updateRegisterField,
+  };
+}
+
+function LoginPage() {
+  const [isRegistering, setIsRegistering] = useState(false);
+
+  const {
+    credentials,
+    registerFields,
+    error,
+    loading,
+    setError,
+    setLoading,
+    updateCredential,
+    updateRegisterField,
+  } = useLoginForm();
+
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleAuthSuccess = (token) => {
+    login(token);
+    navigate("/censo");
+  };
+
+  const handleLogin = async () => {
+    const data = await loginApi(credentials.user, credentials.password);
+    handleAuthSuccess(data.token);
+  };
+
+  const handleRegister = async () => {
+    const data = await registerApi({
+      name: registerFields.name,
+      last_name: registerFields.lastName,
+      docType: registerFields.docType,
+      document: registerFields.document,
+      address: registerFields.address,
+      phone: registerFields.phone,
+      city: registerFields.city,
+      user: credentials.user,
+      password: credentials.password,
+    });
+    handleAuthSuccess(data.token);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (isRegistering) {
+        await handleRegister();
+      } else {
+        await handleLogin();
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleMode = () => {
+    setIsRegistering((prev) => !prev);
+    setError(null);
+  };
+
+  return (
+    <div className="login-page">
+      <div className="login-card">
+        {/* Encabezado */}
+        <div className="login-header">
+          <div className="login-logo-wrapper">
+            <img src={catLogo} alt="Logo de la app" className="login-logo" />
+          </div>
+          <h1 className="login-title">
+            {isRegistering ? "Crear Cuenta" : "Bienvenido"}
+          </h1>
+          <p className="login-subtitle">
+            {isRegistering
+              ? "Completa tus datos para registrarte"
+              : "Ingresa tus credenciales para continuar"}
+          </p>
+        </div>
+
+        {/* Formulario */}
+        <form className="login-form" onSubmit={handleSubmit} noValidate>
+          {isRegistering && (
+            <RegisterFields
+              fields={registerFields}
+              onChange={updateRegisterField}
+            />
+          )}
+
+          <FormField
+            placeholder="Usuario"
+            value={credentials.user}
+            onChange={updateCredential("user")}
+            required
+          />
+          <FormField
+            type="password"
+            placeholder="Contraseña"
+            value={credentials.password}
+            onChange={updateCredential("password")}
+            required
+          />
+
+          {error && <p className="login-error">{error}</p>}
+
+          <button
+            className="login-btn-primary"
+            type="submit"
+            disabled={loading}
+          >
+            {loading
+              ? "Procesando..."
+              : isRegistering
+                ? "Crear Cuenta"
+                : "Ingresar"}
+          </button>
+        </form>
+
+        {/* Pie de tarjeta */}
+        <div className="login-footer">
+          <button className="login-btn-link" type="button" onClick={toggleMode}>
+            {isRegistering
+              ? "¿Ya tienes cuenta? Inicia sesión"
+              : "¿No tienes cuenta? Regístrate"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default LoginPage;

@@ -1,67 +1,107 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useConnection } from "../hooks/useConnection";
 import { createPetApi, getPetsApi } from "../api/pets";
-import { saveLocal, getAll } from "../db/indexedDB";
+import { saveLocal, getAll, syncPending, markAsSynced } from "../db/indexedDB";
 import { generateUUID } from "../utils/uuid";
+import PetCard from "./components/PetCard";
+import "./styles/PetsPage.css";
 
-function PetsPage() {
-  const { token } = useAuth();
-  const online = useConnection();
+const PET_TYPES = [
+  { value: "GATO", label: "Gato" },
+  { value: "PERRO", label: "Perro" },
+  { value: "PAJARO", label: "Pájaro" },
+  { value: "OTRO", label: "Otro" },
+];
 
-  const [form, setForm] = useState({
-    nombre: "",
-    tipo: "GATO",
-    genero: "HEMBRA",
-    edad: "",
-    fotografia: "",
-  });
+const GENDERS = [
+  { value: "HEMBRA", label: "Hembra" },
+  { value: "MACHO", label: "Macho" },
+];
 
-  const [state, setState] = useState(null);
-  const [loading, setLoading] = useState(false);
+const INITIAL_FORM = {
+  nombre: "",
+  tipo: "GATO",
+  genero: "HEMBRA",
+  edad: "",
+  fotografia: "",
+};
+
+const FEEDBACK_TYPE = {
+  ok: "ok",
+  error: "error",
+  offline: "offline",
+};
+
+function usePets(token, online) {
   const [pets, setPets] = useState([]);
   const [loadingList, setLoadingList] = useState(false);
 
-  useEffect(() => {
-    loadPets();
-  }, []);
-
-  const loadPets = async () => {
+  const loadPets = useCallback(async () => {
+    setLoadingList(true);
     try {
-      setLoadingList(true);
-      let apiPets = [];
+      const local = await getAll("mascotas");
+      let merged = [...local];
+
       if (online) {
         try {
-          apiPets = await getPetsApi(token);
+          const remote = await getPetsApi(token);
+          remote.forEach((remotePet) => {
+            if (!merged.find((p) => p.id === remotePet.id)) {
+              merged.push(remotePet);
+            }
+          });
         } catch (err) {
-          console.error("Error fetching from API:", err);
+          console.error("Error al obtener mascotas del servidor:", err);
         }
       }
-      const localPets = await getAll("mascotas");
-      
-      const combined = [...localPets];
-      apiPets.forEach(apiP => {
-        if (!combined.find(p => p.id === apiP.id)) {
-          combined.push(apiP);
-        }
-      });
-      
-      setPets(combined);
+
+      setPets(merged);
     } catch (err) {
       console.error("Error al cargar mascotas:", err);
     } finally {
       setLoadingList(false);
     }
-  };
+  }, [token, online]);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  useEffect(() => {
+    const sync = async () => {
+      if (!online) return;
+      try {
+        await syncPending("mascotas", async (pet) => {
+          await createPetApi(pet, token);
+        });
+        await loadPets();
+      } catch (err) {
+        console.error("Error sincronizando pendientes:", err);
+      }
+    };
+
+    sync();
+  }, [online, token, loadPets]);
+
+  return { pets, loadingList, loadPets };
+}
+
+function PetsPage() {
+  const { token } = useAuth();
+  const online = useConnection();
+
+  const [form, setForm] = useState(INITIAL_FORM);
+  const [feedback, setFeedback] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const { pets, loadingList, loadPets } = usePets(token, online);
+
+  const handleChange = (e) =>
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+
+  const resetForm = () => setForm(INITIAL_FORM);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setState(null);
+    setFeedback(null);
 
     const pet = {
       id: generateUUID(),
@@ -72,165 +112,110 @@ function PetsPage() {
       fotografia: form.fotografia,
     };
 
-    if (online) {
-      try {
-        await createPetApi(pet, token);
-        setState({
-          tipo: "ok",
-          mensaje: "Mascota registrada correctamente",
-        });
-        resetForm();
-        loadPets();
-      } catch (err) {
-        setState({ tipo: "error", mensaje: `${err.message}` });
-      }
-    } else {
-      try {
-        await saveLocal("mascotas", pet);
-        setState({
-          tipo: "offline",
-          mensaje:
+    try {
+      await saveLocal("mascotas", pet);
+      
+      if (online) {
+        try {
+          await createPetApi(pet, token);
+          await markAsSynced("mascotas", pet.id);
+          setFeedback({
+            type: FEEDBACK_TYPE.ok,
+            message: "Mascota registrada correctamente.",
+          });
+        } catch (err) {
+          setFeedback({
+            type: FEEDBACK_TYPE.error,
+            message: `Error al registrar: ${err.message}`,
+          });
+        }
+      } else {
+        setFeedback({
+          type: FEEDBACK_TYPE.offline,
+          message:
             "Guardado localmente. Se sincronizará al recuperar conexión.",
         });
-        resetForm();
-        loadPets();
-      } catch (err) {
-        setState({
-          tipo: "error",
-          mensaje: `Error al guardar local: ${err.message}`,
-        });
       }
+      resetForm();
+      loadPets();
+    } catch (err) {
+      setFeedback({
+        type: FEEDBACK_TYPE.error,
+        message: `Error al guardar: ${err.message}`,
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
-
-  const resetForm = () => {
-    setForm({
-      nombre: "",
-      tipo: "GATO",
-      genero: "HEMBRA",
-      edad: "",
-      fotografia: "",
-    });
-  };
-
-  const colors = {
-    ok: {
-      backgroundColor: "#dcfce7",
-      color: "#166534",
-      padding: "8px",
-      borderRadius: "4px",
-    },
-    error: {
-      backgroundColor: "#fee2e2",
-      color: "#991b1b",
-      padding: "8px",
-      borderRadius: "4px",
-    },
-    offline: {
-      backgroundColor: "#fef9c3",
-      color: "#854d0e",
-      padding: "8px",
-      borderRadius: "4px",
-    },
-  };
-
-  const inputStyle = {
-    display: "block",
-    width: "100%",
-    marginBottom: "8px",
-    padding: "8px",
-    borderRadius: "4px",
-    border: "1px solid #d1d5db",
   };
 
   return (
-    <div style={{ padding: "24px 16px" }}>
-      <h1>Registro de Mascotas</h1>
+    <div className="pets-page">
+      <h1 className="pets-page-title">Registro de Mascotas</h1>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "24px",
-          maxWidth: "1200px",
-          margin: "0 auto",
-        }}
-      >
-        {/* FORMULARIO */}
-        <div
-          style={{
-            padding: "16px",
-            backgroundColor: "#f9fafb",
-            borderRadius: "8px",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Agregar Mascota</h2>
+      <div className="pets-layout">
+        {/* ── Formulario ──────────────────────────────────────────────────── */}
+        <section className="pets-panel" aria-label="Formulario de registro">
+          <h2 className="pets-panel-title">Agregar Mascota</h2>
 
-          <form onSubmit={handleSubmit}>
+          <form className="pets-form" onSubmit={handleSubmit} noValidate>
             <input
+              className="pets-input"
               name="nombre"
               placeholder="Nombre de la mascota"
               value={form.nombre}
               onChange={handleChange}
               required
-              style={inputStyle}
             />
+
             <select
+              className="pets-input pets-select"
               name="tipo"
               value={form.tipo}
               onChange={handleChange}
-              required
-              style={inputStyle}
             >
-              <option value="GATO">GATO</option>
-              <option value="PERRO">PERRO</option>
-              <option value="PAJARO">PÁJARO</option>
-              <option value="OTRO">OTRO</option>
+              {PET_TYPES.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
+
             <select
+              className="pets-input pets-select"
               name="genero"
               value={form.genero}
               onChange={handleChange}
-              required
-              style={inputStyle}
             >
-              <option value="HEMBRA">HEMBRA</option>
-              <option value="MACHO">MACHO</option>
+              {GENDERS.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
+
             <input
+              className="pets-input"
               name="edad"
               type="number"
               step="any"
+              min="0"
               placeholder="Edad (años)"
               value={form.edad}
               onChange={handleChange}
               required
-              style={inputStyle}
             />
             <input
+              className="pets-input"
               name="fotografia"
               placeholder="URL de fotografía"
               value={form.fotografia}
               onChange={handleChange}
-              required
-              style={inputStyle}
             />
 
             <button
+              className="pets-btn-submit"
               type="submit"
               disabled={loading}
-              style={{
-                display: "block",
-                width: "100%",
-                padding: "10px",
-                backgroundColor: "#3b82f6",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: loading ? "not-allowed" : "pointer",
-                opacity: loading ? 0.6 : 1,
-              }}
             >
               {loading
                 ? "Guardando..."
@@ -238,83 +223,38 @@ function PetsPage() {
                   ? "Registrar"
                   : "Guardar Offline"}
             </button>
+
+            {feedback && (
+              <p className={`pets-feedback pets-feedback--${feedback.type}`}>
+                {feedback.message}
+              </p>
+            )}
           </form>
+        </section>
 
-          {state && <p style={colors[state.tipo]}>{state.mensaje}</p>}
-        </div>
+        {/* ── Listado ─────────────────────────────────────────────────────── */}
+        <section className="pets-panel" aria-label="Mascotas registradas">
+          <h2 className="pets-panel-title">
+            Mascotas Guardadas
+            {pets.length > 0 && (
+              <span className="pets-count">{pets.length}</span>
+            )}
+          </h2>
 
-        {/* LISTADO */}
-        <div
-          style={{
-            padding: "16px",
-            backgroundColor: "#f9fafb",
-            borderRadius: "8px",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Mascotas Guardadas</h2>
+          {loadingList && <p className="pets-list-state">Cargando...</p>}
 
-          {loadingList ? (
-            <p style={{ textAlign: "center", color: "#6b7280" }}>Cargando...</p>
-          ) : pets.length === 0 ? (
-            <p style={{ textAlign: "center", color: "#6b7280" }}>
-              No hay mascotas registradas aún
-            </p>
-          ) : (
-            <div style={{ maxHeight: "600px", overflowY: "auto" }}>
+          {!loadingList && pets.length === 0 && (
+            <p className="pets-list-state">No hay mascotas registradas aún.</p>
+          )}
+
+          {!loadingList && pets.length > 0 && (
+            <div className="pets-list">
               {pets.map((pet) => (
-                <div
-                  key={pet.id}
-                  style={{
-                    padding: "12px",
-                    marginBottom: "8px",
-                    backgroundColor: "white",
-                    borderRadius: "4px",
-                    border: "1px solid #e5e7eb",
-                    display: "flex",
-                    gap: "12px",
-                    alignItems: "center"
-                  }}
-                >
-                  {pet.fotografia && (
-                    <img 
-                      src={pet.fotografia} 
-                      alt={pet.nombre} 
-                      style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "4px" }}
-                      onError={(e) => { e.target.src = '/cat-face.svg' }}
-                    />
-                  )}
-                  <div>
-                    <div style={{ fontWeight: "600" }}>
-                      {pet.nombre} <span style={{fontWeight: "normal", color: "#6b7280"}}>({pet.tipo})</span>
-                    </div>
-                    <div style={{ fontSize: "14px", color: "#6b7280" }}>
-                      <div>🎂 {pet.edad} años | {pet.genero}</div>
-                      {pet._syncStatus && (
-                        <div
-                          style={{
-                            marginTop: "6px",
-                            fontSize: "12px",
-                            padding: "4px 8px",
-                            backgroundColor:
-                              pet._syncStatus === "pending"
-                                ? "#fef3c7"
-                                : "#d1fae5",
-                            borderRadius: "3px",
-                            display: "inline-block"
-                          }}
-                        >
-                          {pet._syncStatus === "pending"
-                            ? "⏳ Pendiente"
-                            : "✅ Sincronizado"}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <PetCard key={pet.id} pet={pet} />
               ))}
             </div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );

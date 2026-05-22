@@ -1,334 +1,238 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useConnection } from "../hooks/useConnection";
 import { createPersonApi, getPeopleApi } from "../api/people";
-import { saveLocal, getAll } from "../db/indexedDB";
+import { saveLocal, getAll, syncPending, markAsSynced } from "../db/indexedDB";
 import { generateUUID } from "../utils/uuid";
+import PersonCard from "./components/PersonCard";
+import "./styles/PeoplePage.css";
 
-function PeoplePage() {
-  const { token } = useAuth();
-  const online = useConnection();
+const DOC_TYPES = [
+  { value: "CC", label: "CC – Cédula de Ciudadanía" },
+  { value: "CE", label: "CE – Cédula de Extranjería" },
+  { value: "Pasaporte", label: "Pasaporte" },
+];
 
-  const [form, setForm] = useState({
-    name: "",
-    last_name: "",
-    docType: "CC",
-    document: "",
-    address: "",
-    phone: "",
-    city: "",
-    user: "",
-    password: "",
-  });
+const INITIAL_FORM = {
+  nombres: "",
+  apellidos: "",
+  tipoDocumento: "CC",
+  documento: "",
+  direccion: "",
+  telefono: "",
+  ciudad: "",
+  usuario: "",
+  contrasena: "",
+};
 
-  const [state, setState] = useState(null); // { tipo: 'ok'|'error'|'offline', mensaje }
-  const [loading, setLoading] = useState(false);
+const FEEDBACK_TYPE = {
+  ok: "ok",
+  error: "error",
+  offline: "offline",
+};
+
+function usePeople(token, online) {
   const [people, setPeople] = useState([]);
   const [loadingList, setLoadingList] = useState(false);
 
-  // Cargar personas guardadas localmente
-  useEffect(() => {
-    (async () => {
-      try {
-        setLoadingList(true);
-        const personas = await getAll("personas");
-        setPeople(personas);
-      } catch (err) {
-        console.error("Error al cargar personas:", err);
-      } finally {
-        setLoadingList(false);
-      }
-    })();
-  }, []);
-
-  const loadPeople = async () => {
+  const loadPeople = useCallback(async () => {
+    setLoadingList(true);
     try {
-      setLoadingList(true);
-      let apiPeople = [];
+      const local = await getAll("personas");
+      let merged = [...local];
+
       if (online) {
         try {
-          apiPeople = await getPeopleApi(token);
+          const remote = await getPeopleApi(token);
+          remote.forEach((remotePerson) => {
+            if (!merged.find((p) => p.id === remotePerson.id)) {
+              merged.push(remotePerson);
+            }
+          });
         } catch (err) {
-          console.error("Error fetching from API:", err);
+          console.error("Error al obtener personas del servidor:", err);
         }
       }
-      const personas = await getAll("personas");
-      
-      const combined = [...personas];
-      apiPeople.forEach(apiP => {
-        if (!combined.find(p => p.id === apiP.id)) {
-          combined.push(apiP);
-        }
-      });
-      
-      setPeople(combined);
+
+      setPeople(merged);
     } catch (err) {
       console.error("Error al cargar personas:", err);
     } finally {
       setLoadingList(false);
     }
-  };
+  }, [token, online]);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  useEffect(() => {
+    const sync = async () => {
+      if (!online) return;
+      try {
+        await syncPending("personas", async (person) => {
+          await createPersonApi(person, token);
+        });
+        await loadPeople();
+      } catch (err) {
+        console.error("Error sincronizando pendientes:", err);
+      }
+    };
+
+    sync();
+  }, [online, token, loadPeople]);
+
+  return { people, loadingList, loadPeople };
+}
+
+function PeoplePage() {
+  const { token } = useAuth();
+  const online = useConnection();
+
+  const [form, setForm] = useState(INITIAL_FORM);
+  const [feedback, setFeedback] = useState(null); // { type, message }
+  const [loading, setLoading] = useState(false);
+
+  const { people, loadingList, loadPeople } = usePeople(token, online);
+
+  const handleChange = (e) =>
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+
+  const resetForm = () => setForm(INITIAL_FORM);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setState(null);
+    setFeedback(null);
 
     const person = { id: generateUUID(), ...form };
 
-    // Online: envía al backend
-    if (online) {
-      try {
-        await createPersonApi(person, token);
-        setState({
-          tipo: "ok",
-          mensaje: "Persona registrada correctamente",
-        });
-        resetForm();
-        loadPeople();
-      } catch (err) {
-        setState({ tipo: "error", mensaje: `${err.message}` });
-      }
-
-      // Sin conexión: guarda localmente
-    } else {
-      try {
-        await saveLocal("personas", person);
-        setState({
-          tipo: "offline",
-          mensaje:
+    try {
+      await saveLocal("personas", person);
+      
+      if (online) {
+        try {
+          await createPersonApi(person, token);
+          await markAsSynced("personas", person.id);
+          setFeedback({
+            type: FEEDBACK_TYPE.ok,
+            message: "Persona registrada correctamente.",
+          });
+        } catch (err) {
+          setFeedback({
+            type: FEEDBACK_TYPE.error,
+            message: `Error al registrar: ${err.message}`,
+          });
+        }
+      } else {
+        setFeedback({
+          type: FEEDBACK_TYPE.offline,
+          message:
             "Guardado localmente. Se sincronizará al recuperar conexión.",
         });
-        resetForm();
-        loadPeople();
-      } catch (err) {
-        setState({
-          tipo: "error",
-          mensaje: `Error al guardar local: ${err.message}`,
-        });
       }
+      resetForm();
+      loadPeople();
+    } catch (err) {
+      setFeedback({
+        type: FEEDBACK_TYPE.error,
+        message: `Error al guardar: ${err.message}`,
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
-
-  const resetForm = () => {
-    setForm({
-      name: "",
-      last_name: "",
-      docType: "CC",
-      document: "",
-      address: "",
-      phone: "",
-      city: "",
-      user: "",
-      password: "",
-    });
-  };
-
-  const colors = {
-    ok: {
-      backgroundColor: "#dcfce7",
-      color: "#166534",
-      padding: "8px",
-      borderRadius: "4px",
-    },
-    error: {
-      backgroundColor: "#fee2e2",
-      color: "#991b1b",
-      padding: "8px",
-      borderRadius: "4px",
-    },
-    offline: {
-      backgroundColor: "#fef9c3",
-      color: "#854d0e",
-      padding: "8px",
-      borderRadius: "4px",
-    },
   };
 
   return (
-    <div style={{ padding: "24px 16px" }}>
-      <h1>Registro de Personas</h1>
+    <div className="people-page">
+      <h1 className="people-page-title">Registro de Personas</h1>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "24px",
-          maxWidth: "1200px",
-          margin: "0 auto",
-        }}
-      >
-        {/* COLUMNA IZQUIERDA: FORMULARIO */}
-        <div
-          style={{
-            padding: "16px",
-            backgroundColor: "#f9fafb",
-            borderRadius: "8px",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Agregar Persona</h2>
+      <div className="people-layout">
+        {/* ── Columna izquierda: formulario ─────────────────────────────── */}
+        <section className="people-panel" aria-label="Formulario de registro">
+          <h2 className="people-panel-title">Agregar Persona</h2>
 
-          <form onSubmit={handleSubmit}>
+          <form className="people-form" onSubmit={handleSubmit} noValidate>
             <input
-              name="name"
+              className="people-input"
+              name="nombres"
               placeholder="Nombres"
-              value={form.name}
+              value={form.nombres}
               onChange={handleChange}
               required
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: "8px",
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #d1d5db",
-              }}
             />
             <input
-              name="last_name"
+              className="people-input"
+              name="apellidos"
               placeholder="Apellidos"
-              value={form.last_name}
+              value={form.apellidos}
               onChange={handleChange}
               required
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: "8px",
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #d1d5db",
-              }}
             />
 
             <select
-              name="docType"
-              value={form.docType}
+              className="people-input people-select"
+              name="tipoDocumento"
+              value={form.tipoDocumento}
               onChange={handleChange}
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: "8px",
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #d1d5db",
-              }}
             >
-              <option value="CC">CC</option>
-              <option value="CE">CE</option>
-              <option value="Pasaporte">Pasaporte</option>
+              {DOC_TYPES.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
 
             <input
-              name="document"
-              placeholder="Número de documento"
-              value={form.document}
+              className="people-input"
+              name="documento"
+              placeholder="Número de Documento"
+              value={form.documento}
               onChange={handleChange}
               required
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: "8px",
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #d1d5db",
-              }}
             />
             <input
-              name="address"
+              className="people-input"
+              name="direccion"
               placeholder="Dirección"
-              value={form.address}
+              value={form.direccion}
               onChange={handleChange}
               required
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: "8px",
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #d1d5db",
-              }}
             />
             <input
-              name="phone"
+              className="people-input"
+              name="telefono"
               placeholder="Teléfono"
-              value={form.phone}
+              value={form.telefono}
               onChange={handleChange}
               required
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: "8px",
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #d1d5db",
-              }}
             />
             <input
-              name="city"
+              className="people-input"
+              name="ciudad"
               placeholder="Ciudad"
-              value={form.city}
+              value={form.ciudad}
               onChange={handleChange}
               required
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: "8px",
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #d1d5db",
-              }}
             />
             <input
-              name="user"
+              className="people-input"
+              name="usuario"
               placeholder="Usuario"
-              value={form.user}
+              value={form.usuario}
               onChange={handleChange}
               required
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: "8px",
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #d1d5db",
-              }}
             />
             <input
-              name="password"
-              placeholder="Contraseña"
+              className="people-input"
+              name="contrasena"
               type="password"
-              value={form.password}
+              placeholder="Contraseña"
+              value={form.contrasena}
               onChange={handleChange}
               required
-              style={{
-                display: "block",
-                width: "100%",
-                marginBottom: "8px",
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #d1d5db",
-              }}
             />
 
             <button
+              className="people-btn-submit"
               type="submit"
               disabled={loading}
-              style={{
-                display: "block",
-                width: "100%",
-                padding: "10px",
-                backgroundColor: "#3b82f6",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: loading ? "not-allowed" : "pointer",
-                opacity: loading ? 0.6 : 1,
-              }}
             >
               {loading
                 ? "Guardando..."
@@ -336,75 +240,42 @@ function PeoplePage() {
                   ? "Registrar"
                   : "Guardar Offline"}
             </button>
+
+            {feedback && (
+              <p
+                className={`people-feedback people-feedback--${feedback.type}`}
+              >
+                {feedback.message}
+              </p>
+            )}
           </form>
+        </section>
 
-          {state && <p style={colors[state.tipo]}>{state.mensaje}</p>}
-        </div>
+        {/* ── Columna derecha: listado ───────────────────────────────────── */}
+        <section className="people-panel" aria-label="Personas registradas">
+          <h2 className="people-panel-title">
+            Personas Guardadas
+            {people.length > 0 && (
+              <span className="people-count">{people.length}</span>
+            )}
+          </h2>
 
-        {/* COLUMNA DERECHA: LISTADO */}
-        <div
-          style={{
-            padding: "16px",
-            backgroundColor: "#f9fafb",
-            borderRadius: "8px",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Personas Guardadas</h2>
+          {loadingList && <p className="people-list-state">Cargando...</p>}
 
-          {loadingList ? (
-            <p style={{ textAlign: "center", color: "#6b7280" }}>Cargando...</p>
-          ) : people.length === 0 ? (
-            <p style={{ textAlign: "center", color: "#6b7280" }}>
-              No hay personas registradas aún
+          {!loadingList && people.length === 0 && (
+            <p className="people-list-state">
+              No hay personas registradas aún.
             </p>
-          ) : (
-            <div style={{ maxHeight: "600px", overflowY: "auto" }}>
+          )}
+
+          {!loadingList && people.length > 0 && (
+            <div className="people-list">
               {people.map((person) => (
-                <div
-                  key={person.id}
-                  style={{
-                    padding: "12px",
-                    marginBottom: "8px",
-                    backgroundColor: "white",
-                    borderRadius: "4px",
-                    border: "1px solid #e5e7eb",
-                  }}
-                >
-                  <div style={{ fontWeight: "600" }}>
-                    {person.name} {person.last_name}
-                  </div>
-                  <div style={{ fontSize: "14px", color: "#6b7280" }}>
-                    <div>
-                      📄 {person.docType}: {person.document}
-                    </div>
-                    <div>📍 {person.address}</div>
-                    <div>📞 {person.phone}</div>
-                    <div>🏙️ {person.city}</div>
-                    <div>👤 @{person.user}</div>
-                    {person._syncStatus && (
-                      <div
-                        style={{
-                          marginTop: "6px",
-                          fontSize: "12px",
-                          padding: "4px 8px",
-                          backgroundColor:
-                            person._syncStatus === "pending"
-                              ? "#fef3c7"
-                              : "#d1fae5",
-                          borderRadius: "3px",
-                        }}
-                      >
-                        {person._syncStatus === "pending"
-                          ? "⏳ Pendiente de sincronización"
-                          : "✅ Sincronizado"}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <PersonCard key={person.id} person={person} />
               ))}
             </div>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );

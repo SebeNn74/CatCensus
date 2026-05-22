@@ -1,28 +1,68 @@
-import { simulateNetworkDelay, validateToken, mockDatabase, idCounters, saveDatabase } from '../db.js'
+import { simulateNetworkDelay, validateToken, mockDatabase, saveDatabase, generateNewId } from '../db.js'
 
-export async function handlePersonas(method, body, token) {
+export async function handlePersonas(method, body, token, id) {
   await simulateNetworkDelay()
 
   if (method === 'GET') {
-    return {
-      status: 200,
-      data: mockDatabase.personas,
+    if (id) {
+      const persona = mockDatabase.personas.find(p => p.id === id)
+      if (!persona) {
+        return {
+          status: 404,
+          error: 'Persona no encontrada',
+        }
+      }
+      // No retorna contraseña en GET
+      const { contrasena, ...personaSinPassword } = persona
+      return {
+        status: 200,
+        data: personaSinPassword,
+      }
+    } else {
+      // Listar todas sin mostrar contraseña
+      const personas = mockDatabase.personas.map(p => {
+        const { contrasena, ...personaSinPassword } = p
+        return personaSinPassword
+      })
+      return {
+        status: 200,
+        data: personas,
+      }
     }
   }
 
   if (method === 'POST') {
-    if (!validateToken(token)) {
-      return {
-        status: 401,
-        error: 'No autorizado',
+    const data = typeof body === 'string' ? JSON.parse(body) : body
+
+    const { nombres, apellidos, tipoDocumento, documento, direccion, telefono, ciudad } = data
+
+    if (!nombres || !apellidos || !tipoDocumento || !documento) {
+      return { 
+        status: 400, 
+        error: 'Campos requeridos: nombres, apellidos, tipoDocumento, documento' 
       }
     }
 
-    const persona = typeof body === 'string' ? JSON.parse(body) : body
-    const newPersona = {
-      id: String(++idCounters.personas),
-      ...persona,
+    // Verificar que no exista persona con el mismo documento
+    const exists = mockDatabase.personas.find(p => p.documento === documento)
+    if (exists) {
+      return {
+        status: 400,
+        error: 'Ya existe una persona con este documento'
+      }
     }
+
+    const newPersona = {
+      id: generateNewId(),
+      nombres,
+      apellidos,
+      tipoDocumento,
+      documento,
+      direccion: direccion || '',
+      telefono: telefono || '',
+      ciudad: ciudad || ''
+    }
+    
     mockDatabase.personas.push(newPersona)
     saveDatabase()
 

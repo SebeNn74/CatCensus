@@ -1,28 +1,50 @@
-import { simulateNetworkDelay, validateToken, mockDatabase, idCounters, saveDatabase } from '../db.js'
+import { simulateNetworkDelay, mockDatabase, saveDatabase, generateNewId } from '../db.js'
 
-export async function handleMascotas(method, body, token) {
+export async function handleMascotas(method, body, token, id) {
   await simulateNetworkDelay()
 
   if (method === 'GET') {
-    return {
-      status: 200,
-      data: mockDatabase.mascotas,
+    if (id) {
+      const mascota = mockDatabase.mascotas.find(m => m.id === id)
+      if (!mascota) {
+        return {
+          status: 404,
+          error: 'Mascota no encontrada',
+        }
+      }
+      return {
+        status: 200,
+        data: mascota,
+      }
+    } else {
+      return {
+        status: 200,
+        data: mockDatabase.mascotas,
+      }
     }
   }
 
   if (method === 'POST') {
-    if (!validateToken(token)) {
-      return {
-        status: 401,
-        error: 'No autorizado',
+    const data = typeof body === 'string' ? JSON.parse(body) : body
+
+    const { nombre, tipo, genero, edad, fotografia } = data
+
+    if (!nombre || !tipo || !genero || edad === undefined) {
+      return { 
+        status: 400, 
+        error: 'Campos requeridos: nombre, tipo, genero, edad' 
       }
     }
 
-    const mascota = typeof body === 'string' ? JSON.parse(body) : body
     const newMascota = {
-      id: String(++idCounters.mascotas),
-      ...mascota,
+      id: generateNewId(),
+      nombre,
+      tipo,
+      genero,
+      edad: parseFloat(edad),
+      fotografia: fotografia || ''
     }
+    
     mockDatabase.mascotas.push(newMascota)
     saveDatabase()
 

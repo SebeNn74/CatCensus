@@ -1,0 +1,84 @@
+:root {
+  --clr-offline: #f59e0b;
+  --clr-offline-bg: #78350f;
+  --clr-pending: #10b981;
+  --clr-pending-bg: #064e3b;
+}
+
+.sync-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.45rem 1.25rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  animation: bannerSlideIn var(--t-mid) var(--ease-out) both;
+}
+
+@keyframes bannerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sync-banner--offline {
+  background: var(--clr-offline-bg);
+  color: var(--clr-offline);
+}
+
+.sync-banner--pending {
+  background: var(--clr-pending-bg);
+  color: var(--clr-pending);
+}
+
+.sync-banner-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+}
+
+.sync-banner--offline .sync-banner-dot {
+  background: var(--clr-offline);
+  animation: dotBlink 1.8s ease-in-out infinite;
+}
+
+.sync-banner--pending .sync-banner-dot {
+  background: var(--clr-pending);
+  animation: dotPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes dotBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+@keyframes dotPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.6;
+  }
+}
+
+.sync-banner-text {
+  line-height: 1.3;
+}

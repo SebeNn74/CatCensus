@@ -28,8 +28,8 @@ export async function create(storeName, data) {
   const record = {
     ...data,
     _id: String(data.id),
-    _syncStatus: "pending",
-    _createdAt: new Date().toISOString(),
+    syncStatus: "pending",
+    createdAt: new Date().toISOString(),
   };
 
   try {
@@ -90,9 +90,9 @@ export async function update(storeName, id, updates) {
     const updated = {
       ...doc,
       ...updates,
-      _syncStatus:
-        doc._syncStatus === "sincronizado" ? "pending" : doc._syncStatus,
-      _updatedAt: new Date().toISOString(),
+      syncStatus:
+        doc.syncStatus === "synced" ? "pending" : doc.syncStatus,
+      updatedAt: new Date().toISOString(),
     };
     await db.put(updated);
 
@@ -133,12 +133,12 @@ export async function remove(storeName, id) {
 // Obtiene todos los registros pendientes de sincronización
 export async function getPendingSync(storeName) {
   const all = await readAll(storeName);
-  return all.filter((item) => item._syncStatus === "pending");
+  return all.filter((item) => item.syncStatus === "pending");
 }
 
 // Marca un registro como sincronizado
 export async function markAsSynced(storeName, id) {
-  return update(storeName, id, { _syncStatus: "sincronizado" });
+  return update(storeName, id, { syncStatus: "synced" });
 }
 
 export async function getSyncStats() {
@@ -152,6 +152,19 @@ export async function getSyncStats() {
     ...stats,
     total: Object.values(stats).reduce((a, b) => a + b, 0),
   };
+}
+
+export async function syncPending(storeName, syncFn) {
+  const pendings = await getPendingSync(storeName);
+
+  for (const item of pendings) {
+    try {
+      await syncFn(item);
+      await remove(storeName, item.id);
+    } catch (err) {
+      console.error("Error sincronizando:", item.id, err);
+    }
+  }
 }
 
 export const saveLocal = create;

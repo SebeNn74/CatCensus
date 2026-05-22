@@ -1,33 +1,31 @@
-/*D400ff*/
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap");
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* Colores */
+  --clr-bg: #f7f5fa; /* fondo página */
+  --clr-card: #ffffff; /* fondo tarjeta */
+  --clr-primary: #d400ff; /* violeta principal */
+  --clr-primary-dark: #a800cc; /* variante más oscura para hover */
+  --clr-lime: #9bff00; /* acento complementario */
+  --clr-ink: #1a0a22; /* texto principal */
+  --clr-muted: #7a6b86; /* texto secundario */
+  --clr-border: #e2d9ed; /* bordes de inputs */
+  --clr-error: #ff2d6a; /* mensajes de error */
 
-  --sans: system-ui, "Segoe UI", Roboto, sans-serif;
-  --heading: system-ui, "Segoe UI", Roboto, sans-serif;
+  /* Tipografía */
+  --font-display: system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Espaciado */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  /* Transiciones */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast: 160ms;
+  --t-mid: 300ms;
 }
 
 * {
@@ -36,39 +34,10 @@
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-  justify-content: center;
-}
-
 #root {
   max-width: 100%;
   text-align: center;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 400px;
-  margin: 2em auto;
-}
-
-input {
-  padding: 0.5em;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  margin-bottom: 1em;
-}
-
-button {
-  padding: 0.5em 1em;
-  border: none;
-  border-radius: 4px;
-  background: var(--accent);
-  color: #fff;
-  cursor: pointer;
 }
