@@ -1,0 +1,502 @@
+.census-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  animation: pageIn var(--t-mid) var(--ease-out) both;
+}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.census-page-title {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--clr-ink);
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.4px;
+  border-left: 4px solid var(--clr-primary);
+  padding-left: 0.75rem;
+}
+
+.census-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .census-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.census-panel {
+  background: var(--clr-card);
+  border: 1.5px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
+.census-panel-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--clr-ink);
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.census-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  background: var(--clr-primary);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+}
+
+.census-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.census-label {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--clr-ink);
+  letter-spacing: 0.2px;
+  margin-top: 0.5rem;
+}
+
+.census-input {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--clr-ink);
+  background: var(--clr-bg);
+  border: 1.5px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition:
+    border-color var(--t-fast) var(--ease-out),
+    box-shadow var(--t-fast) var(--ease-out),
+    transform var(--t-fast) var(--ease-out);
+}
+
+.census-input::placeholder {
+  color: var(--clr-muted);
+}
+
+.census-input:focus {
+  border-color: var(--clr-primary);
+  box-shadow: 0 0 0 3px rgba(212, 0, 255, 0.1);
+  transform: translateY(-1px);
+  background: var(--clr-card);
+}
+
+.census-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%237A6B86' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  padding-right: 2.4rem;
+  cursor: pointer;
+}
+
+.census-gps-hint {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--clr-muted);
+  margin-top: 0.25rem;
+}
+
+.census-btn-submit {
+  width: 100%;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--clr-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background var(--t-fast) var(--ease-out),
+    transform var(--t-fast) var(--ease-out),
+    box-shadow var(--t-fast) var(--ease-out);
+}
+
+.census-btn-submit:hover:not(:disabled) {
+  background: var(--clr-primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(212, 0, 255, 0.28);
+}
+
+.census-btn-submit:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.census-btn-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.census-feedback {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border-width: 1px;
+  border-style: solid;
+  animation: shake 0.35s var(--ease-out);
+}
+
+@keyframes shake {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.census-feedback--ok {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+.census-feedback--offline {
+  background: #fffbeb;
+  color: #92400e;
+  border-color: #fde68a;
+}
+.census-feedback--error {
+  background: #fff1f2;
+  color: #9f1239;
+  border-color: #fecdd3;
+}
+
+.census-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 640px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--clr-border) transparent;
+}
+
+.census-list-state {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--clr-muted);
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.census-card {
+  display: flex;
+  gap: 0.85rem;
+  background: var(--clr-bg);
+  border: 1.5px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  transition:
+    border-color var(--t-fast) var(--ease-out),
+    transform var(--t-fast) var(--ease-out),
+    box-shadow var(--t-fast) var(--ease-out);
+  animation: cardIn var(--t-mid) var(--ease-out) both;
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.census-card:hover {
+  border-color: var(--clr-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(212, 0, 255, 0.08);
+}
+
+.census-card-photo {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  border: 1.5px solid var(--clr-border);
+}
+
+.census-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.census-card-id {
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--clr-ink);
+}
+
+.census-card-details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.65rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+}
+
+.census-card-row {
+  display: contents;
+}
+
+.census-card-details dt {
+  color: var(--clr-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.census-card-details dd {
+  color: var(--clr-ink);
+  text-align: left;
+  word-break: break-word;
+}
+
+.census-card-badge {
+  display: inline-block;
+  margin-top: 0.4rem;
+  padding: 0.15rem 0.55rem;
+  font-family: var(--font-body);
+  font-size: 0.73rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border-width: 1px;
+  border-style: solid;
+}
+
+.census-card-badge--pending {
+  background: #fffbeb;
+  color: #92400e;
+  border-color: #fde68a;
+}
+.census-card-badge--synced {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+.camera-capture {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-block: 0.25rem;
+}
+
+.camera-viewfinder {
+  border: 1.5px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #000;
+  animation: fadeIn var(--t-fast) var(--ease-out) both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.camera-video {
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  display: block;
+}
+
+.camera-controls {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  background: var(--clr-card);
+}
+
+.camera-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.camera-divider {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--clr-muted);
+  text-align: center;
+}
+
+.camera-btn {
+  flex: 1;
+  padding: 0.6rem 0.9rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background var(--t-fast) var(--ease-out),
+    transform var(--t-fast) var(--ease-out);
+}
+
+.camera-btn--open {
+  background: var(--clr-ink);
+  color: #fff;
+}
+
+.camera-btn--open:hover {
+  background: #2d1a3a;
+  transform: translateY(-1px);
+}
+
+.camera-btn--capture {
+  background: var(--clr-lime);
+  color: var(--clr-ink);
+}
+
+.camera-btn--capture:hover {
+  background: #82e000;
+  transform: translateY(-1px);
+}
+
+.camera-btn--cancel {
+  background: var(--clr-bg);
+  color: var(--clr-muted);
+  border: 1.5px solid var(--clr-border);
+}
+
+.camera-btn--cancel:hover {
+  background: var(--clr-border);
+}
+
+.camera-file-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--clr-muted);
+  cursor: pointer;
+}
+
+.camera-file-input {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--clr-muted);
+  border: 1.5px dashed var(--clr-border);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+  background: var(--clr-bg);
+  cursor: pointer;
+  width: 100%;
+  transition: border-color var(--t-fast) var(--ease-out);
+}
+
+.camera-file-input:hover {
+  border-color: var(--clr-primary);
+}
+
+.camera-error {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: #9f1239;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.7rem;
+}
+
+.camera-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  animation: fadeIn var(--t-fast) var(--ease-out) both;
+}
+
+.camera-preview-img {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--clr-border);
+}
+
+.camera-preview-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--clr-muted);
+}
+
+.camera-preview-clear {
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: #9f1239;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity var(--t-fast) var(--ease-out);
+}
+
+.camera-preview-clear:hover {
+  opacity: 0.7;
+}

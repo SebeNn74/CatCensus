@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useConnection } from "../hooks/useConnection";
+import { usePersonForm } from "../hooks/usePersonForm";
 import { createPersonApi, getPeopleApi } from "../api/people";
 import { saveLocal, getAll, syncPending, markAsSynced } from "../db/indexedDB";
 import { generateUUID } from "../utils/uuid";
 import PersonCard from "./components/PersonCard";
+import FormField from "../components/FormField";
 import "./styles/PeoplePage.css";
 
 const DOC_TYPES = [
@@ -12,18 +14,6 @@ const DOC_TYPES = [
   { value: "CE", label: "CE – Cédula de Extranjería" },
   { value: "Pasaporte", label: "Pasaporte" },
 ];
-
-const INITIAL_FORM = {
-  nombres: "",
-  apellidos: "",
-  tipoDocumento: "CC",
-  documento: "",
-  direccion: "",
-  telefono: "",
-  ciudad: "",
-  usuario: "",
-  contrasena: "",
-};
 
 const FEEDBACK_TYPE = {
   ok: "ok",
@@ -85,19 +75,20 @@ function PeoplePage() {
   const { token } = useAuth();
   const online = useConnection();
 
-  const [form, setForm] = useState(INITIAL_FORM);
   const [feedback, setFeedback] = useState(null); // { type, message }
   const [loading, setLoading] = useState(false);
 
   const { people, loadingList, loadPeople } = usePeople(token, online);
 
-  const handleChange = (e) =>
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-
-  const resetForm = () => setForm(INITIAL_FORM);
+  const { form, errors, handleChange, validate, resetForm } = usePersonForm();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validate()) {
+      return;
+    }
+
     setLoading(true);
     setFeedback(null);
 
@@ -105,7 +96,7 @@ function PeoplePage() {
 
     try {
       await saveLocal("personas", person);
-      
+
       if (online) {
         try {
           await createPersonApi(person, token);
@@ -149,20 +140,20 @@ function PeoplePage() {
           <h2 className="people-panel-title">Agregar Persona</h2>
 
           <form className="people-form" onSubmit={handleSubmit} noValidate>
-            <input
-              className="people-input"
+            <FormField
               name="nombres"
               placeholder="Nombres"
               value={form.nombres}
               onChange={handleChange}
+              error={errors.nombres?.[0]}
               required
             />
-            <input
-              className="people-input"
+            <FormField
               name="apellidos"
               placeholder="Apellidos"
               value={form.apellidos}
               onChange={handleChange}
+              error={errors.apellidos?.[0]}
               required
             />
 
@@ -179,53 +170,53 @@ function PeoplePage() {
               ))}
             </select>
 
-            <input
-              className="people-input"
+            <FormField
               name="documento"
               placeholder="Número de Documento"
               value={form.documento}
               onChange={handleChange}
+              error={errors.documento?.[0]}
               required
             />
-            <input
-              className="people-input"
+            <FormField
               name="direccion"
               placeholder="Dirección"
               value={form.direccion}
               onChange={handleChange}
+              error={errors.direccion?.[0]}
               required
             />
-            <input
-              className="people-input"
+            <FormField
               name="telefono"
               placeholder="Teléfono"
               value={form.telefono}
               onChange={handleChange}
+              error={errors.telefono?.[0]}
               required
             />
-            <input
-              className="people-input"
+            <FormField
               name="ciudad"
               placeholder="Ciudad"
               value={form.ciudad}
               onChange={handleChange}
+              error={errors.ciudad?.[0]}
               required
             />
-            <input
-              className="people-input"
+            <FormField
               name="usuario"
               placeholder="Usuario"
               value={form.usuario}
               onChange={handleChange}
+              error={errors.usuario?.[0]}
               required
             />
-            <input
-              className="people-input"
+            <FormField
               name="contrasena"
               type="password"
               placeholder="Contraseña"
               value={form.contrasena}
               onChange={handleChange}
+              error={errors.contrasena?.[0]}
               required
             />
 

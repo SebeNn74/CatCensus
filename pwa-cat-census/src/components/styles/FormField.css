@@ -1,0 +1,35 @@
+.form-input {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--clr-ink);
+  background: var(--clr-bg);
+  border: 1.5px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition:
+    border-color var(--t-fast) var(--ease-out),
+    box-shadow var(--t-fast) var(--ease-out),
+    transform var(--t-fast) var(--ease-out);
+}
+
+.form-input::placeholder {
+  color: var(--clr-muted);
+}
+
+.form-input:focus {
+  border-color: var(--clr-primary);
+  box-shadow: 0 0 0 3px rgba(212, 0, 255, 0.1);
+  transform: translateY(-1px);
+  background: var(--clr-card);
+}
+
+.form-error {
+  color: var(--clr-error);
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  margin-top: 4px;
+  margin-left: 10px;
+  text-align: left;
+}
