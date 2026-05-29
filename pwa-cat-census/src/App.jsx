@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { PushPermissionModal } from "./components/PushPermissionModal";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 import PeoplePage from "./pages/PeoplePage";
@@ -14,6 +15,7 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           <SyncBanner />
+          <PushPermissionModal />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
 

@@ -2,8 +2,12 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useConnection } from "../hooks/useConnection";
 import { createPetApi, getPetsApi } from "../api/pets";
-import { saveLocal, getAll, syncPending, markAsSynced, cacheRemoteData } from "../db/indexedDB";
-import { generateUUID } from "../utils/uuid";
+import {
+  saveLocal,
+  getAll,
+  syncPending,
+  cacheRemoteData,
+} from "../db/indexedDB";
 import PetCard from "./components/PetCard";
 import "./styles/PetsPage.css";
 
@@ -98,7 +102,6 @@ function PetsPage() {
     setFeedback(null);
 
     const pet = {
-      id: generateUUID(),
       nombre: form.nombre,
       tipo: form.tipo,
       genero: form.genero,

@@ -1,9 +1,8 @@
 import { API_BASE_URL, ID_PROYECT, COLOR_PROYECT } from './config'
 
 export async function createCensusApi(censo, token) {
-    const { id, _id, _rev, syncStatus, createdAt, updatedAt, ...cleanCenso } = censo;
     const payload = {
-        ...cleanCenso,
+        ...censo,
         idProyecto: ID_PROYECT,
         color: COLOR_PROYECT,
     }

@@ -3,8 +3,12 @@ import { useAuth } from "../hooks/useAuth";
 import { useConnection } from "../hooks/useConnection";
 import { usePersonForm } from "../hooks/usePersonForm";
 import { createPersonApi, getPeopleApi } from "../api/people";
-import { saveLocal, getAll, syncPending, markAsSynced, cacheRemoteData } from "../db/indexedDB";
-import { generateUUID } from "../utils/uuid";
+import {
+  saveLocal,
+  getAll,
+  syncPending,
+  cacheRemoteData,
+} from "../db/indexedDB";
 import PersonCard from "./components/PersonCard";
 import FormField from "../components/FormField";
 import "./styles/PeoplePage.css";
@@ -86,7 +90,7 @@ function PeoplePage() {
     setLoading(true);
     setFeedback(null);
 
-    const person = { id: generateUUID(), ...form };
+    const person = form;
 
     try {
       if (online) {

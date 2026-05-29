@@ -4,10 +4,15 @@ import { useConnection } from "../hooks/useConnection";
 import { createCensusApi, getCensusApi } from "../api/census";
 import { getPeopleApi } from "../api/people";
 import { getPetsApi } from "../api/pets";
-import { saveLocal, getAll, cacheRemoteData, syncPending } from "../db/indexedDB";
-import { generateUUID } from "../utils/uuid";
+import {
+  saveLocal,
+  getAll,
+  cacheRemoteData,
+  syncPending,
+} from "../db/indexedDB";
 import CensusCard from "./components/CensusCard";
 import CameraCapture from "./components/CameraCapture";
+import { NotificationBadge } from "../components/NotificationBadge";
 import "./styles/CensusPage.css";
 
 const INITIAL_FORM = {
@@ -21,8 +26,6 @@ const FEEDBACK_TYPE = {
   error: "error",
   offline: "offline",
 };
-
-
 
 function getCurrentPosition() {
   return new Promise((resolve, reject) => {
@@ -53,7 +56,7 @@ function useCensuses(token, online) {
           console.error("Error al obtener censos del servidor:", err);
         }
       }
-      
+
       const local = await getAll("censos");
       setCensuses(local);
     } catch (err) {
@@ -105,7 +108,7 @@ function useDependencies(token, online) {
 
         const localPeople = await getAll("personas");
         const localPets = await getAll("mascotas");
-        
+
         setPeople(localPeople);
         setPets(localPets);
       } catch (err) {
@@ -149,7 +152,6 @@ function CensusPage() {
       const coords = await getCurrentPosition();
 
       const census = {
-        id: generateUUID(),
         idMascota: form.idMascota,
         idDueno: form.idDueno,
         fotografia: form.fotografia,
@@ -188,8 +190,10 @@ function CensusPage() {
 
   return (
     <div className="census-page">
-      <h1 className="census-page-title">Registro de Censos</h1>
-
+      <div className="census-page-header">
+        <h1 className="census-page-title">Registro de Censos</h1>
+        <NotificationBadge />
+      </div>
       <div className="census-layout">
         {/* ── Formulario ──────────────────────────────────────────────────── */}
         <section className="census-panel" aria-label="Formulario de censo">
